@@ -388,7 +388,7 @@ SNA::compute_ui()
   int total_iter = num_nbor * num_atoms;
   std::vector<int> range(total_iter);
   std::iota(range.begin(), range.end(), 0);
-  std::for_each(std::execution::seq, range.begin(), range.end(), [=](int ij){
+  std::for_each(PAR_UNSEQ range.begin(), range.end(), [=](int ij){
   // for (int nbor = 0; nbor < num_nbor; nbor++) {
   //   for (int natom = 0; natom < num_atoms; natom++) {
       int nbor =  ij / num_atoms;
@@ -424,7 +424,7 @@ SNA::compute_yi(SNADOUBLE* beta)
   int total_iter_0 = idxdu_max * num_atoms;
   std::vector<int> range_0(total_iter_0);
   std::iota(range_0.begin(), range_0.end(), 0);
-  std::for_each(std::execution::par_unseq, range_0.begin(), range_0.end(), [=](int ij){
+  std::for_each(PAR_UNSEQ range_0.begin(), range_0.end(), [=](int ij){
       int natom = ij / idxdu_max;
       int jjdu = ij % idxdu_max;
       ylist(natom, jjdu) = { 0.0, 0.0 };
@@ -433,7 +433,7 @@ SNA::compute_yi(SNADOUBLE* beta)
   int total_iter = idxz_max * num_atoms;
   std::vector<int> range(total_iter);
   std::iota(range.begin(), range.end(), 0);
-  std::for_each(std::execution::par_unseq, range.begin(), range.end(), [=](int ij){
+  std::for_each(PAR_UNSEQ range.begin(), range.end(), [=](int ij){
       int jjz =  ij / num_atoms;
       int natom =  ij % num_atoms;
 
@@ -655,14 +655,12 @@ SNA::add_uarraytot(int natom,
     int jju = idxu_block(j);
     for (int mb = 0; mb <= j; mb++)
       for (int ma = 0; ma <= j; ma++) {
-// #if _OPENMP
-// #pragma omp atomic
-// #endif
-        ulisttot(natom, jju).re += sfac * ulist(natom, nbor, jju).re;
-// #if _OPENMP
-// #pragma omp atomic
-// #endif
-        ulisttot(natom, jju).im += sfac * ulist(natom, nbor, jju).im;
+        // ulisttot(natom, jju).re += sfac * ulist(natom, nbor, jju).re;
+        // ulisttot(natom, jju).im += sfac * ulist(natom, nbor, jju).im;
+        std::atomic_ref<SNADOUBLE> atomic_re(ulisttot(natom, jju).re);
+        std::atomic_ref<SNADOUBLE> atomic_im(ulisttot(natom, jju).im);
+        atomic_re.fetch_add(sfac * ulist(natom, nbor, jju).re);
+        atomic_im.fetch_add(sfac * ulist(natom, nbor, jju).im);
         jju++;
       }
   }

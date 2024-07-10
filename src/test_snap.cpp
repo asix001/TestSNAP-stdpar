@@ -122,7 +122,7 @@ compute_error(SNA* snaptr)
 int
 main(int argc, char* argv[])
 {
-  std::cout << "******* Parallel STL & OpenMP4.5 version *******"
+  std::cout << "******* Parallel STL *******"
             << " \n";
 
 
