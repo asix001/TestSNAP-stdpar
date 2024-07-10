@@ -386,9 +386,9 @@ SNA::compute_ui()
   addself_uarraytot(wself);
 
   int total_iter = num_nbor * num_atoms;
-  std::vector<int> range(total_iter);
-  std::iota(range.begin(), range.end(), 0);
-  std::for_each(PAR_UNSEQ range.begin(), range.end(), [=](int ij){
+  const auto& start = std::views::iota(0,total_iter).begin();
+  const auto& end = std::views::iota(0,total_iter).end();
+  std::for_each(PAR_UNSEQ start, end, [=](int ij){  
   // for (int nbor = 0; nbor < num_nbor; nbor++) {
   //   for (int natom = 0; natom < num_atoms; natom++) {
       int nbor =  ij / num_atoms;
@@ -419,21 +419,22 @@ SNA::compute_yi(SNADOUBLE* beta)
 {
 
   // Initialize ylist elements to zeros
+  int total_iter_0 = idxdu_max * num_atoms;
+  const auto& start_0 = std::views::iota(0,total_iter_0).begin();
+  const auto& end_0 = std::views::iota(0,total_iter_0).end();
   // for (int natom = 0; natom < num_atoms; natom++)
   //   for (int jjdu = 0; jjdu < idxdu_max; jjdu++)
-  int total_iter_0 = idxdu_max * num_atoms;
-  std::vector<int> range_0(total_iter_0);
-  std::iota(range_0.begin(), range_0.end(), 0);
-  std::for_each(PAR_UNSEQ range_0.begin(), range_0.end(), [=](int ij){
+  std::for_each(PAR_UNSEQ start_0, end_0, [=](int ij){
       int natom = ij / idxdu_max;
       int jjdu = ij % idxdu_max;
+
       ylist(natom, jjdu) = { 0.0, 0.0 };
   });
 
-  int total_iter = idxz_max * num_atoms;
-  std::vector<int> range(total_iter);
-  std::iota(range.begin(), range.end(), 0);
-  std::for_each(PAR_UNSEQ range.begin(), range.end(), [=](int ij){
+  int total_iter_1 = idxz_max * num_atoms;
+  const auto& start_1 = std::views::iota(0,total_iter_1).begin();
+  const auto& end_1 = std::views::iota(0,total_iter_1).end();
+  std::for_each(PAR_UNSEQ start_1, end_1, [=](int ij){
       int jjz =  ij / num_atoms;
       int natom =  ij % num_atoms;
 
@@ -516,8 +517,15 @@ SNA::compute_yi(SNADOUBLE* beta)
 void
 SNA::compute_deidrj()
 {
-  for (int nbor = 0; nbor < num_nbor; nbor++) {
-    for (int natom = 0; natom < num_atoms; natom++) {
+  int total_iter = num_nbor * num_atoms;
+  const auto& start = std::views::iota(0,total_iter).begin();
+  const auto& end = std::views::iota(0,total_iter).end();
+  // for (int nbor = 0; nbor < num_nbor; nbor++) {
+  //   for (int natom = 0; natom < num_atoms; natom++) {
+  std::for_each(PAR_UNSEQ start, end, [=](int ij){
+      int nbor =  ij / num_atoms;
+      int natom =  ij % num_atoms;
+
       for (int k = 0; k < 3; k++)
         dedr(natom, nbor, k) = 0.0;
 
@@ -570,8 +578,9 @@ SNA::compute_deidrj()
       for (int k = 0; k < 3; k++)
         dedr(natom, nbor, k) *= 2.0;
 
-    } // nbor
-  }   // natom
+  //   } // nbor
+  // }   // natom
+  });
 }
 
 /* ----------------------------------------------------------------------
@@ -582,9 +591,9 @@ void
 SNA::compute_duidrj()
 {
   int total_iter = num_nbor * num_atoms;
-  std::vector<int> range(total_iter);
-  std::iota(range.begin(), range.end(), 0);
-  std::for_each(PAR_UNSEQ range.begin(), range.end(), [=](int ij){
+  const auto& start = std::views::iota(0,total_iter).begin();
+  const auto& end = std::views::iota(0,total_iter).end();
+  std::for_each(PAR_UNSEQ start, end, [=](int ij){
   // for (int nbor = 0; nbor < num_nbor; nbor++) {
   //   for (int natom = 0; natom < num_atoms; natom++) {
       int nbor = ij / num_atoms;
