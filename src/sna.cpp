@@ -40,7 +40,6 @@
 #include <execution>
 #include <numeric>
 #include <ranges>
-#include <vector>
 
 #include "sna.h"
 #include "memory.h"
@@ -386,6 +385,7 @@ SNA::compute_ui()
   addself_uarraytot(wself);
 
   int total_iter = num_nbor * num_atoms;
+  // std::cout << "total iter in compute_ui = " << total_iter << std::endl;
   const auto& start = std::views::iota(0,total_iter).begin();
   const auto& end = std::views::iota(0,total_iter).end();
   std::for_each(PAR_UNSEQ start, end, [=](int ij){  
