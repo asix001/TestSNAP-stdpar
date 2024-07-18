@@ -23,10 +23,21 @@ ADD_EXECUTABLE(
   )
 
 target_compile_definitions(${MyTarget} PRIVATE REFDATA_TWOJ=${ref_data})
+target_link_libraries(${MyTarget} PRIVATE nvtx3-cpp) # use nvtx tool
 
 find_package(CUDA REQUIRED)
+# find_package(ROCM REQUIRED)
 
-if(${CMAKE_CXX_COMPILER_ID} STREQUAL NVHPC)
+### NVIDIA GPU ###
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "NVHPC")
     set(CMAKE_CXX_FLAGS "-O3 -Wall -gpu=cc80 -stdpar=gpu -std=c++20")
 endif()
-  
+
+### AMD GPU ###
+if(${CMAKE_CXX_COMPILER_ID} STREQUAL "HIP")
+  set(CMAKE_CXX_FLAGS "-O3 -Wall -std=c++17 -v --hipstdpar --hipstdpar-path=/home/gp.sc.cc.tohoku.ac.jp/joanna/research/himeno/stdpar/roc-stdpar/include --offload-arch=gfx90a:xnack+ -B /home/gp.sc.cc.tohoku.ac.jp/joanna/llvm-project/lld/build/bin")
+
+endif()
+
+## roc-stdpar path
+# /home/gp.sc.cc.tohoku.ac.jp/joanna/research/himeno/stdpar/roc-stdpar/include

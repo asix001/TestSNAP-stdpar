@@ -30,10 +30,6 @@
 #ifndef LMP_SNA_H
 #define LMP_SNA_H
 
-// #if _OPENMP
-#include <omp.h>
-// #endif
-
 // Use the column-major format of ArrayMD for GPUs
 // #if (OPENMP_TARGET)
 #include "arrayMDgpu.h"

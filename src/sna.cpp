@@ -32,6 +32,10 @@
 // 07.2024
 // ----------------------------------------------------------------------
 
+// use C++20 if STD_20 = 1
+// otherwise, use C++17
+#define STD_20 1
+
 #define PAR_UNSEQ std::execution::par_unseq, 
 #define SEQ std::execution::seq, 
 
@@ -39,7 +43,11 @@
 #include <atomic>
 #include <execution>
 #include <numeric>
-#include <ranges>
+#if (STD_20)
+  #include <ranges> // STD 20
+#else
+  #include <vector> // STD 17
+#endif
 
 #include "sna.h"
 #include "memory.h"
@@ -385,9 +393,15 @@ SNA::compute_ui()
   addself_uarraytot(wself);
 
   int total_iter = num_nbor * num_atoms;
-  // std::cout << "total iter in compute_ui = " << total_iter << std::endl;
-  const auto& start = std::views::iota(0,total_iter).begin();
-  const auto& end = std::views::iota(0,total_iter).end();
+  #if (STD_20)
+    const auto& start = std::views::iota(0,total_iter).begin();
+    const auto& end = std::views::iota(0,total_iter).end();
+  #else
+    std::vector<int> range(total_iter);
+    const auto start = range.begin();
+    const auto end = range.end();
+    std::iota(start, end, 0);
+  #endif
   std::for_each(PAR_UNSEQ start, end, [=](int ij){  
   // for (int nbor = 0; nbor < num_nbor; nbor++) {
   //   for (int natom = 0; natom < num_atoms; natom++) {
@@ -420,11 +434,18 @@ SNA::compute_yi(SNADOUBLE* beta)
 
   // Initialize ylist elements to zeros
   int total_iter_0 = idxdu_max * num_atoms;
-  const auto& start_0 = std::views::iota(0,total_iter_0).begin();
-  const auto& end_0 = std::views::iota(0,total_iter_0).end();
+  #if (STD_20)
+    const auto& start_0 = std::views::iota(0,total_iter_0).begin();
+    const auto& end_0 = std::views::iota(0,total_iter_0).end();
+  #else
+    std::vector<int> range_0(total_iter_0);
+    const auto start_0 = range_0.begin();
+    const auto end_0 = range_0.end();
+    std::iota(start_0, end_0, 0);
+  #endif
+  std::for_each(PAR_UNSEQ start_0, end_0, [=](int ij){
   // for (int natom = 0; natom < num_atoms; natom++)
   //   for (int jjdu = 0; jjdu < idxdu_max; jjdu++)
-  std::for_each(PAR_UNSEQ start_0, end_0, [=](int ij){
       int natom = ij / idxdu_max;
       int jjdu = ij % idxdu_max;
 
@@ -432,9 +453,18 @@ SNA::compute_yi(SNADOUBLE* beta)
   });
 
   int total_iter_1 = idxz_max * num_atoms;
-  const auto& start_1 = std::views::iota(0,total_iter_1).begin();
-  const auto& end_1 = std::views::iota(0,total_iter_1).end();
+  #if (STD_20)
+    const auto& start_1 = std::views::iota(0,total_iter_1).begin();
+    const auto& end_1 = std::views::iota(0,total_iter_1).end();
+  #else
+  std::vector<int> range_1(total_iter_1);
+  const auto start_1 = range_0.begin();
+  const auto end_1 = range_0.end();
+  std::iota(start_1, end_1, 0);
+  #endif
   std::for_each(PAR_UNSEQ start_1, end_1, [=](int ij){
+  // for (int jjz = 0; jjz < idxz_max; jjz++)
+  //   for (int natom = 0; natom < num_atoms; natom++)
       int jjz =  ij / num_atoms;
       int natom =  ij % num_atoms;
 
@@ -501,11 +531,15 @@ SNA::compute_yi(SNADOUBLE* beta)
         icgb += j2;
       } // end loop over ib
 
-      std::atomic_ref<SNADOUBLE> atomic_re(ylist(natom, jjdu).re);
-      std::atomic_ref<SNADOUBLE> atomic_im(ylist(natom, jjdu).im);
-      atomic_re.fetch_add(betaj * ztmp_r);
-      atomic_im.fetch_add(betaj * ztmp_i);
-
+      #if (STD_20)
+        std::atomic_ref<SNADOUBLE> atomic_re(ylist(natom, jjdu).re);
+        std::atomic_ref<SNADOUBLE> atomic_im(ylist(natom, jjdu).im);
+        atomic_re.fetch_add(betaj * ztmp_r);
+        atomic_im.fetch_add(betaj * ztmp_i);
+      #else
+      __atomic_add_fetch(&ylist(natom, jjdu).re, betaj * ztmp_r, __ATOMIC_SEQ_CST);
+      __atomic_add_fetch(&ylist(natom, jjdu).im, betaj * ztmp_i, __ATOMIC_SEQ_CST);
+      #endif
     }); // end jjz and natom loop
 }
 
@@ -518,8 +552,15 @@ void
 SNA::compute_deidrj()
 {
   int total_iter = num_nbor * num_atoms;
-  const auto& start = std::views::iota(0,total_iter).begin();
-  const auto& end = std::views::iota(0,total_iter).end();
+  #if (STD_20)
+    const auto& start = std::views::iota(0,total_iter).begin();
+    const auto& end = std::views::iota(0,total_iter).end();
+  #else
+    std::vector<int> range(total_iter);
+    const auto start = range.begin();
+    const auto end = range.end();
+    std::iota(start, end, 0);
+  #endif
   // for (int nbor = 0; nbor < num_nbor; nbor++) {
   //   for (int natom = 0; natom < num_atoms; natom++) {
   std::for_each(PAR_UNSEQ start, end, [=](int ij){
@@ -591,8 +632,15 @@ void
 SNA::compute_duidrj()
 {
   int total_iter = num_nbor * num_atoms;
-  const auto& start = std::views::iota(0,total_iter).begin();
-  const auto& end = std::views::iota(0,total_iter).end();
+  #if (STD_20)
+    const auto& start = std::views::iota(0,total_iter).begin();
+    const auto& end = std::views::iota(0,total_iter).end();
+  #else
+    std::vector<int> range(total_iter);
+    const auto start = range.begin();
+    const auto end = range.end();
+    std::iota(start, end, 0);
+  #endif
   std::for_each(PAR_UNSEQ start, end, [=](int ij){
   // for (int nbor = 0; nbor < num_nbor; nbor++) {
   //   for (int natom = 0; natom < num_atoms; natom++) {
@@ -666,10 +714,15 @@ SNA::add_uarraytot(int natom,
       for (int ma = 0; ma <= j; ma++) {
         // ulisttot(natom, jju).re += sfac * ulist(natom, nbor, jju).re;
         // ulisttot(natom, jju).im += sfac * ulist(natom, nbor, jju).im;
-        std::atomic_ref<SNADOUBLE> atomic_re(ulisttot(natom, jju).re);
-        std::atomic_ref<SNADOUBLE> atomic_im(ulisttot(natom, jju).im);
-        atomic_re.fetch_add(sfac * ulist(natom, nbor, jju).re);
-        atomic_im.fetch_add(sfac * ulist(natom, nbor, jju).im);
+        #if (STD_20)
+          std::atomic_ref<SNADOUBLE> atomic_re(ulisttot(natom, jju).re);
+          std::atomic_ref<SNADOUBLE> atomic_im(ulisttot(natom, jju).im);
+          atomic_re.fetch_add(sfac * ulist(natom, nbor, jju).re);
+          atomic_im.fetch_add(sfac * ulist(natom, nbor, jju).im);
+        #else
+        __atomic_add_fetch(&ulisttot(natom, jju).re, sfac * ulist(natom, nbor, jju).re, __ATOMIC_SEQ_CST);
+        __atomic_add_fetch(&ulisttot(natom, jju).im, sfac * ulist(natom, nbor, jju).im, __ATOMIC_SEQ_CST);
+        #endif
         jju++;
       }
   }
