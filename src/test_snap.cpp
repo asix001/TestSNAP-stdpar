@@ -41,6 +41,9 @@
 #include <iostream>
 #include <sys/time.h>
 
+// use nvtx tool for profiling
+#include <nvtx3/nvtx3.hpp>
+
 #if REFDATA_TWOJ == 8
 #include "refdata_2J8_W.h"
 #elif REFDATA_TWOJ == 14
@@ -256,6 +259,7 @@ init()
 void
 compute()
 {
+  NVTX3_FUNC_RANGE();
   time_point<system_clock> start, end;
   duration<double> elapsed;
   // initialize all forces to zero

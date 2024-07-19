@@ -45,7 +45,7 @@ int ninside;    // num neighbors per atom
 int nlocal;     // number of local atoms
 int nghost;     // number of ghost atoms
 int ntotal;     // number of total atoms
-int nsteps = 1; // num of force evaluations
+int nsteps = 100; // num of force evaluations
 Array2D<double> f;
 SNADOUBLE* coeffi = NULL; // beta coefficients for atom i
 int ncoeff;               // number of beta coefficients

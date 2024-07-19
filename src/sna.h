@@ -27,6 +27,13 @@
 //
 // ----------------------------------------------------------------------
 
+#define PAR_UNSEQ std::execution::par_unseq, 
+#define SEQ std::execution::seq, 
+
+// if STD_20 = 1, use C++20
+// if STD_20 = 0, use C++17
+#define STD_20 1
+
 #ifndef LMP_SNA_H
 #define LMP_SNA_H
 
@@ -97,11 +104,6 @@ public:
 
   // Public vars for number of atoms and neighbors
   int num_nbor, num_atoms;
-
-// #if (OPENMP_TARGET)
-  void omp_offload_init();
-  void omp_offload_update();
-// #endif
 
 private:
   Memory* memory;
