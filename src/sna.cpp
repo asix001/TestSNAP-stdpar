@@ -32,12 +32,15 @@
 // 07.2024
 // ----------------------------------------------------------------------
 
-// use C++20 if STD_20 = 1
-// otherwise, use C++17
-#define STD_20 1
+#include "sna.h"
+#include "memory.h"
+#include <cuda_runtime.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
 
-#define PAR_UNSEQ std::execution::par_unseq, 
-#define SEQ std::execution::seq, 
 
 #include <algorithm>
 #include <atomic>
@@ -49,13 +52,8 @@
   #include <vector> // STD 17
 #endif
 
-#include "sna.h"
-#include "memory.h"
-#include <cmath>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
+// use nvtx tool for profiling
+#include <nvtx3/nvtx3.hpp>
 
 /* ----------------------------------------------------------------------
 
@@ -360,11 +358,47 @@ SNA::build_indexlist(const double* beta)
       }
 }
 
+/* ---------------------------------------------------------------------- */
+#if (CUDA_ON)
+// Allocate Unified Memory
+void SNA::cuda_init() {
+    cudaMallocManaged(&idxu_block.dptr, idxu_block.size * sizeof(int));
+    cudaMallocManaged(&ulist_parity.dptr, ulist_parity.size * sizeof(int));
+    
+    cudaMallocManaged(&rootpqarray.dptr, rootpqarray.size * sizeof(SNADOUBLE)); 
+    cudaMallocManaged(&idxz.dptr, idxz.size * sizeof(int));
+    cudaMallocManaged(&idxzbeta.dptr, idxzbeta.size * sizeof(SNADOUBLE));
+    cudaMallocManaged(&idxcg_block.dptr, idxcg_block.size * sizeof(int));
+    cudaMallocManaged(&idxdu_block.dptr, idxdu_block.size * sizeof(int));
+    cudaMallocManaged(&cglist.dptr, cglist.size * sizeof(SNADOUBLE)); 
+
+    cudaMallocManaged(&ulist.dptr, ulist.size * sizeof(SNAcomplex)); 
+    cudaMallocManaged(&ulisttot.dptr, ulisttot.size * sizeof(SNAcomplex));
+    
+    cudaMallocManaged(&dulist.dptr, dulist.size * sizeof(SNAcomplex)); 
+    cudaMallocManaged(&ylist.dptr, ylist.size * sizeof(SNAcomplex)); 
+    
+    cudaMallocManaged(&idxz_block, sizeof(int**)); 
+    cudaMallocManaged(&idxb_block, sizeof(int**)); 
+}
+
+void SNA::cuda_update() {
+    cudaMallocManaged(&rij.dptr, rij.size * sizeof(SNAcomplex)); 
+    cudaMallocManaged(&rcutij.dptr, rcutij.size * sizeof(SNAcomplex)); 
+    cudaMallocManaged(&wj.dptr, wj.size * sizeof(SNAcomplex)); 
+    cudaDeviceSynchronize();
+}
+#endif
+/* ---------------------------------------------------------------------- */
+
 void
 SNA::init()
 {
   init_clebsch_gordan();
   init_rootpqarray();
+#if (CUDA_ON)
+  cuda_init();
+#endif
 }
 
 void
@@ -389,6 +423,7 @@ SNA::grow_rij(int newnmax)
 void
 SNA::compute_ui()
 {
+  NVTX3_FUNC_RANGE();
   zero_uarraytot();
   addself_uarraytot(wself);
 
@@ -418,6 +453,15 @@ SNA::compute_ui()
         (r - rmin0) * rfac0 * MY_PI / (rcutij(natom, nbor) - rmin0);
       SNADOUBLE z0 = r / tan(theta0);
 
+      /** Test **/
+      // SNADOUBLE x = 0;
+      // SNADOUBLE y = 0;
+      // SNADOUBLE z = 0;
+      // SNADOUBLE rsq = 0;
+      // SNADOUBLE r = 0;
+
+      // SNADOUBLE theta0 = 0;
+      // SNADOUBLE z0 = 0;
       compute_uarray(natom, nbor, x, y, z, z0, r);
       add_uarraytot(natom, nbor, r, wj(natom, nbor), rcutij(natom, nbor));
     // }
@@ -431,7 +475,7 @@ SNA::compute_ui()
 void
 SNA::compute_yi(SNADOUBLE* beta)
 {
-
+  NVTX3_FUNC_RANGE();
   // Initialize ylist elements to zeros
   int total_iter_0 = idxdu_max * num_atoms;
   #if (STD_20)
@@ -537,8 +581,12 @@ SNA::compute_yi(SNADOUBLE* beta)
         atomic_re.fetch_add(betaj * ztmp_r);
         atomic_im.fetch_add(betaj * ztmp_i);
       #else
-      __atomic_add_fetch(&ylist(natom, jjdu).re, betaj * ztmp_r, __ATOMIC_SEQ_CST);
-      __atomic_add_fetch(&ylist(natom, jjdu).im, betaj * ztmp_i, __ATOMIC_SEQ_CST);
+      auto& element = ylist(natom, jjdu);
+      long long* re_ptr = reinterpret_cast<long long*>(&element.re);
+      long long* im_ptr = reinterpret_cast<long long*>(&element.im);
+
+      __atomic_add_fetch(re_ptr, betaj * ztmp_r, __ATOMIC_SEQ_CST);
+      __atomic_add_fetch(im_ptr, betaj * ztmp_i, __ATOMIC_SEQ_CST);
       #endif
     }); // end jjz and natom loop
 }
@@ -551,6 +599,7 @@ SNA::compute_yi(SNADOUBLE* beta)
 void
 SNA::compute_deidrj()
 {
+  NVTX3_FUNC_RANGE();
   int total_iter = num_nbor * num_atoms;
   #if (STD_20)
     const auto& start = std::views::iota(0,total_iter).begin();
@@ -622,6 +671,7 @@ SNA::compute_deidrj()
   //   } // nbor
   // }   // natom
   });
+  cudaDeviceSynchronize();
 }
 
 /* ----------------------------------------------------------------------
@@ -631,6 +681,7 @@ SNA::compute_deidrj()
 void
 SNA::compute_duidrj()
 {
+  NVTX3_FUNC_RANGE();
   int total_iter = num_nbor * num_atoms;
   #if (STD_20)
     const auto& start = std::views::iota(0,total_iter).begin();
@@ -720,8 +771,12 @@ SNA::add_uarraytot(int natom,
           atomic_re.fetch_add(sfac * ulist(natom, nbor, jju).re);
           atomic_im.fetch_add(sfac * ulist(natom, nbor, jju).im);
         #else
-        __atomic_add_fetch(&ulisttot(natom, jju).re, sfac * ulist(natom, nbor, jju).re, __ATOMIC_SEQ_CST);
-        __atomic_add_fetch(&ulisttot(natom, jju).im, sfac * ulist(natom, nbor, jju).im, __ATOMIC_SEQ_CST);
+        auto& element = ulisttot(natom, jju);
+        long long* re_ptr = reinterpret_cast<long long*>(&element.re);
+        long long* im_ptr = reinterpret_cast<long long*>(&element.im);
+
+        __atomic_add_fetch(re_ptr, sfac * ulist(natom, nbor, jju).re, __ATOMIC_SEQ_CST);
+        __atomic_add_fetch(im_ptr, sfac * ulist(natom, nbor, jju).im, __ATOMIC_SEQ_CST);
         #endif
         jju++;
       }

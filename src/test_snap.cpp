@@ -276,7 +276,10 @@ compute()
       snaptr->rcutij(natom, nbor) = rcutfac;
     }
   }
-
+  #if (CUDA_ON)
+    snaptr->cuda_update();
+  #endif
+  
   // compute_ui
   start = system_clock::now();
   snaptr->compute_ui();
@@ -299,6 +302,7 @@ compute()
   elapsed = end - start;
   elapsed_duidrj += elapsed.count();
 
+  // compute_deidrj
   start = system_clock::now();
   snaptr->compute_deidrj();
   end = system_clock::now();
