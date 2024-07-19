@@ -6,7 +6,7 @@ Implementation based on: https://github.com/FitSNAP/TestSNAP/tree/OpenMP4.5
 
 ## Build system
 ### CMake
-Download NVTX tool into code directory or comment out NVTX commands (in `sna.cpp` and `test_snap.cpp`)
+Download NVTX tool into code directory or comment out NVTX commands (in `CMakeLists.txt`, `sna.cpp`, and `test_snap.cpp`)
 
 https://github.com/NVIDIA/NVTX?tab=readme-ov-file
 
