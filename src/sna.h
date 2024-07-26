@@ -37,6 +37,17 @@
 #ifndef LMP_SNA_H
 #define LMP_SNA_H
 
+#include <algorithm>
+#include <atomic>
+#include <execution>
+#include <numeric>
+#if (STD_20)
+  #include <ranges> // STD 20
+#else
+  #include <vector> // STD 17
+#endif
+
+
 // Use the column-major format of ArrayMD for GPUs
 // #if (OPENMP_TARGET)
 #include "arrayMDgpu.h"

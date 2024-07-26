@@ -41,6 +41,8 @@
 #include <iostream>
 #include <sys/time.h>
 
+#include <cstdlib> // for exit(1)
+
 // use nvtx tool for profiling
 #include <nvtx3/nvtx3.hpp>
 
@@ -76,11 +78,21 @@ elapsedTime(timeval start_time, timeval end_time)
 ------------------------------------------------------------------------- */
 void inline init_forces()
 {
-  for (int j = 0; j < ntotal; j++) {
+  #if (STD_20)
+    const auto& start = std::views::iota(0,ntotal).begin();
+    const auto& end = std::views::iota(0,ntotal).end();
+  #else
+    std::vector<int> range(ntotal);
+    const auto start = range.begin();
+    const auto end = range.end();
+    std::iota(start, end, 0);
+  #endif
+  std::for_each(PAR_UNSEQ start, end, [=](int j){  
+  // for (int j = 0; j < ntotal; j++) {
     f(j, 0) = 0.0;
     f(j, 1) = 0.0;
     f(j, 2) = 0.0;
-  }
+  });
 }
 
 /* ----------------------------------------------------------------------
@@ -260,53 +272,72 @@ void
 compute()
 {
   NVTX3_FUNC_RANGE();
-  time_point<system_clock> start, end;
+  time_point<system_clock> start_timer, end_timer;
   duration<double> elapsed;
   // initialize all forces to zero
   init_forces();
 
-  int jt = 0, jjt = 0;
+  // int jt = 0, jjt = 0;
   const int num_atoms = snaptr->num_atoms;
   const int num_nbor = snaptr->num_nbor;
+  // printf("num_atoms = %d, num_nbor = %d\n", num_atoms, num_nbor);
+  // printf("snaptr->rij.n1 = %d, snaptr->rij.n2 = %d, snaptr->rij.n3 = %d\n", snaptr->rij.n1, snaptr->rij.n2, snaptr->rij.n3);
+  // printf("snaptr->rcutij.n1 = %d, snaptr->rcutij.n2 = %d\n", snaptr->rcutij.n1, snaptr->rcutij.n2);
 
   // loop over atoms and generate neighbors, dummy values
-  for (int natom = 0; natom < num_atoms; natom++) {
-    for (int nbor = 0; nbor < num_nbor; nbor++) {
-      snaptr->rij(natom, nbor, 0) = refdata.rij[jt++];
-      snaptr->rij(natom, nbor, 1) = refdata.rij[jt++];
-      snaptr->rij(natom, nbor, 2) = refdata.rij[jt++];
-      snaptr->inside(natom, nbor) = refdata.jlist[jjt++];
-      snaptr->wj(natom, nbor) = 1.0;
-      snaptr->rcutij(natom, nbor) = rcutfac;
-    }
-  }
+  int total_iter = num_nbor * num_atoms;
+  #if (STD_20)
+    const auto& start = std::views::iota(0,total_iter).begin();
+    const auto& end = std::views::iota(0,total_iter).end();
+  #else
+    std::vector<int> range(total_iter);
+    const auto start = range.begin();
+    const auto end = range.end();
+    std::iota(start, end, 0);
+  #endif
+  std::for_each(PAR_UNSEQ start, end, [=](int ij){  
+    int natom = ij / num_nbor;
+    int nbor = ij % num_nbor;
+    int j = ij * 3;
+    // printf("ij = %d, j = %d, natom = %d, nbor = %d\n", ij, j, natom, nbor);
+    // printf("num_atoms = %d, num_nbor = %d\n", snaptr->num_atoms, snaptr->num_nbor);
+    // printf("snaptr->rij.n1 = %d, snaptr->rij.n2 = %d, snaptr->rij.n3 = %d\n", snaptr->rij.n1, snaptr->rij.n2, snaptr->rij.n3);
+    // printf("snaptr->rcutij.n1 = %d, snaptr->rcutij.n2 = %d\n", snaptr->rcutij.n1, snaptr->rcutij.n2);
+
+    snaptr->rij(natom, nbor, 0) = refdata.rij[j];
+    snaptr->rij(natom, nbor, 1) = refdata.rij[j + 1];
+    snaptr->rij(natom, nbor, 2) = refdata.rij[j + 2];
+    snaptr->inside(natom, nbor) = refdata.jlist[ij];
+    snaptr->wj(natom, nbor) = 1.0;
+    snaptr->rcutij(natom, nbor) = rcutfac;
+  });
 
   // compute_ui
-  start = system_clock::now();
+  start_timer = system_clock::now();
   snaptr->compute_ui();
-  end = system_clock::now();
-  elapsed = end - start;
+  end_timer = system_clock::now();
+  elapsed = end_timer - start_timer;
   elapsed_ui += elapsed.count();
 
   // compute_yi
-  start = system_clock::now();
+  start_timer = system_clock::now();
   SNADOUBLE* beta = coeffi + 1;
   snaptr->compute_yi(beta);
-  end = system_clock::now();
-  elapsed = end - start;
+  end_timer = system_clock::now();
+  elapsed = end_timer - start_timer;
   elapsed_yi += elapsed.count();
 
   // compute_duidrj
-  start = system_clock::now();
+  start_timer = system_clock::now();
   snaptr->compute_duidrj();
-  end = system_clock::now();
-  elapsed = end - start;
+  end_timer = system_clock::now();
+  elapsed = end_timer - start_timer;
   elapsed_duidrj += elapsed.count();
 
-  start = system_clock::now();
+  start_timer = system_clock::now();
   snaptr->compute_deidrj();
-  end = system_clock::now();
-  elapsed = end - start;
+  end_timer = system_clock::now();
+  elapsed = end_timer - start_timer;
   elapsed_deidrj += elapsed.count();
 
   // Compute forces and error

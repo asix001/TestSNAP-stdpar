@@ -33,7 +33,7 @@ find_package(CUDA REQUIRED)
 
 ### NVIDIA GPU ###
 if(${CMAKE_CXX_COMPILER_ID} STREQUAL "NVHPC")
-    set(CMAKE_CXX_FLAGS "-O3 -Wall -gpu=cc80 -stdpar=gpu -std=c++20") # -Minfo")
+    set(CMAKE_CXX_FLAGS "-O3 -Wall -gpu=cc80 -stdpar=gpu -gpu=mem:unified -std=c++20") #-g -gpu=debug") # -Minfo")
 endif()
 
 ### AMD GPU ###

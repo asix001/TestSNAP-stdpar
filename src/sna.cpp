@@ -40,17 +40,6 @@
 #include <cstring>
 #include <iostream>
 
-
-#include <algorithm>
-#include <atomic>
-#include <execution>
-#include <numeric>
-#if (STD_20)
-  #include <ranges> // STD 20
-#else
-  #include <vector> // STD 17
-#endif
-
 // use nvtx tool for profiling
 #include <nvtx3/nvtx3.hpp>
 
