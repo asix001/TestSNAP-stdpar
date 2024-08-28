@@ -5,8 +5,8 @@ Original work: https://github.com/FitSNAP/TestSNAP/tree/master
 Implementation based on: https://github.com/FitSNAP/TestSNAP/tree/OpenMP4.5
 
 ## Compiler versions
-AMD clang version 18.0.0 (ROCM 6.2.0)
-nvc++ 22.11-0  
+* AMD clang version 18.0.0 (ROCM 6.2.0)
+* nvc++ 22.11-0  
 
 ## Build system
 ### CMake
