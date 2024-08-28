@@ -32,7 +32,11 @@
 
 // if STD_20 = 1, use C++20
 // if STD_20 = 0, use C++17
-#define STD_20 1
+#define STD_20 0
+
+// if NVIDIA = 1, use NVIDIA GPU profiling tools
+// else set NVIDIA = 0
+#define NVTX 0
 
 #ifndef LMP_SNA_H
 #define LMP_SNA_H
@@ -49,11 +53,7 @@
 
 
 // Use the column-major format of ArrayMD for GPUs
-// #if (OPENMP_TARGET)
 #include "arrayMDgpu.h"
-// #else
-// #include "arrayMDcpu.h"
-// #endif
 
 typedef double SNADOUBLE;
 typedef float SNAFLOAT;

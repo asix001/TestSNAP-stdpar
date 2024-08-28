@@ -40,8 +40,10 @@
 #include <cstring>
 #include <iostream>
 
+#if(NVTX)
 // use nvtx tool for profiling
-#include <nvtx3/nvtx3.hpp>
+  #include <nvtx3/nvtx3.hpp>
+#endif
 
 /* ----------------------------------------------------------------------
 
@@ -375,7 +377,9 @@ SNA::grow_rij(int newnmax)
 void
 SNA::compute_ui()
 {
-  NVTX3_FUNC_RANGE();
+  #if(NVTX)
+    NVTX3_FUNC_RANGE();
+  #endif
   zero_uarraytot();
   addself_uarraytot(wself);
 
@@ -417,7 +421,9 @@ SNA::compute_ui()
 void
 SNA::compute_yi(SNADOUBLE* beta)
 {
-  NVTX3_FUNC_RANGE();
+  #if(NVTX)
+    NVTX3_FUNC_RANGE();
+  #endif
   // Initialize ylist elements to zeros
   int total_iter_0 = idxdu_max * num_atoms;
   #if (STD_20)
@@ -541,7 +547,9 @@ SNA::compute_yi(SNADOUBLE* beta)
 void
 SNA::compute_deidrj()
 {
-  NVTX3_FUNC_RANGE();
+  #if(NVTX)
+    NVTX3_FUNC_RANGE();
+  #endif
   int total_iter = num_nbor * num_atoms;
   #if (STD_20)
     const auto& start = std::views::iota(0,total_iter).begin();
@@ -622,7 +630,9 @@ SNA::compute_deidrj()
 void
 SNA::compute_duidrj()
 {
-  NVTX3_FUNC_RANGE();
+  #if(NVTX)
+    NVTX3_FUNC_RANGE();
+  #endif
   int total_iter = num_nbor * num_atoms;
   #if (STD_20)
     const auto& start = std::views::iota(0,total_iter).begin();
